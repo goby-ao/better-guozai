@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:,">
+  <title>果仔的夏日成长清单</title>
+  <style>
+    :root {
+      --canvas: oklch(0.94 0.025 91);
+      --paper: oklch(0.99 0.012 92);
+      --ink: oklch(0.30 0.045 230);
+      --muted: oklch(0.51 0.035 220);
+      --ocean: oklch(0.55 0.105 216);
+      --ocean-dark: oklch(0.39 0.09 220);
+      --ocean-soft: oklch(0.92 0.045 210);
+      --mango: oklch(0.83 0.15 82);
+      --mango-soft: oklch(0.95 0.07 87);
+      --leaf: oklch(0.63 0.105 155);
+      --leaf-soft: oklch(0.93 0.045 155);
+      --coral: oklch(0.69 0.13 34);
+      --coral-soft: oklch(0.94 0.045 36);
+      --line: oklch(0.83 0.035 215);
+      --line-light: oklch(0.91 0.02 215);
+      --shadow: 0 22px 70px color-mix(in oklch, var(--ink) 15%, transparent),
+                0 3px 12px color-mix(in oklch, var(--ink) 8%, transparent);
+      --radius-sm: 7px;
+      --radius-md: 11px;
+      --radius-lg: 18px;
+      --radius-pill: 999px;
+      --font-display: "Kaiti SC", STKaiti, KaiTi, "楷体", serif;
+      --font-ui: "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--font-ui);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      background:
+        radial-gradient(circle at 10% 4%, color-mix(in oklch, var(--mango-soft) 80%, transparent) 0 10rem, transparent 10.2rem),
+        var(--canvas);
+    }
+
+    button { font: inherit; }
+
+    .skip-link {
+      position: fixed;
+      z-index: 30;
+      top: 8px;
+      left: 8px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--ink);
+      color: var(--paper);
+      transform: translateY(-150%);
+      transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .skip-link:focus { transform: translateY(0); }
+
+    .toolbar {
+      position: sticky;
+      z-index: 20;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      min-height: 76px;
+      padding: 12px max(18px, calc((100vw - 210mm) / 2));
+      background: color-mix(in oklch, var(--canvas) 94%, transparent);
+      box-shadow: 0 1px 0 color-mix(in oklch, var(--ink) 10%, transparent);
+    }
+
+    .toolbar-copy { min-width: 0; }
+
+    .toolbar-title {
+      margin: 0;
+      color: var(--ocean-dark);
+      font-family: var(--font-display);
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -0.012em;
+      text-wrap: balance;
+    }
+
+    .toolbar-note {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .button {
+      min-height: 44px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: var(--radius-md);
+      background: var(--ocean-dark);
+      color: var(--paper);
+      box-shadow: 0 5px 14px color-mix(in oklch, var(--ocean-dark) 22%, transparent);
+      cursor: pointer;
+      touch-action: manipulation;
+      transition-property: transform, opacity;
+      transition-duration: 150ms;
+      transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .button.secondary {
+      background: var(--paper);
+      color: var(--ocean-dark);
+      box-shadow: inset 0 0 0 1px var(--line), 0 2px 7px color-mix(in oklch, var(--ink) 8%, transparent);
+    }
+
+    .button:active { transform: scale(0.96); }
+
+    .button:focus-visible,
+    [contenteditable="true"]:focus-visible,
+    .check-button:focus-visible,
+    .delete-task:focus-visible,
+    .star:focus-visible {
+      outline: 3px solid color-mix(in oklch, var(--ocean) 45%, transparent);
+      outline-offset: 3px;
+    }
+
+    @media (hover: hover) {
+      .button:hover { transform: translateY(-1px); }
+      .button:active { transform: translateY(0) scale(0.96); }
+    }
+
+    main { padding: 26px 12px 50px; }
+
+    .sheet-scroller {
+      overflow-x: auto;
+      padding-bottom: 18px;
+      overscroll-behavior: contain;
+    }
+
+    .sheet {
+      position: relative;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 13mm 15mm 11mm;
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+      color: var(--ink);
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+
+    .sheet::after {
+      content: "";
+      position: absolute;
+      z-index: 0;
+      right: -21mm;
+      bottom: -25mm;
+      width: 66mm;
+      height: 66mm;
+      border: 11mm solid var(--ocean-soft);
+      border-radius: 50%;
+      opacity: 0.8;
+      pointer-events: none;
+    }
+
+    .sheet > * { position: relative; z-index: 1; }
+
+    .masthead {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 33mm;
+      align-items: start;
+      gap: 9mm;
+      min-height: 43mm;
+      padding-bottom: 6mm;
+      border-bottom: 0.45mm solid var(--ocean);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 2mm;
+      margin: 0 0 2.5mm;
+      color: var(--ocean);
+      font-size: 8.5pt;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 8mm;
+      height: 1.6mm;
+      border-radius: var(--radius-pill);
+      background: var(--mango);
+    }
+
+    .paper-title {
+      margin: 0;
+      color: var(--ocean-dark);
+      font-family: var(--font-display);
+      font-size: 28pt;
+      line-height: 1.04;
+      font-weight: 700;
+      letter-spacing: -0.022em;
+      text-wrap: balance;
+    }
+
+    .paper-subtitle {
+      margin: 2.2mm 0 0;
+      color: var(--muted);
+      font-family: var(--font-display);
+      font-size: 12.5pt;
+      line-height: 1.3;
+    }
+
+    .day-stamp {
+      display: grid;
+      place-items: center;
+      width: 33mm;
+      aspect-ratio: 1;
+      padding: 4mm;
+      border-radius: 50%;
+      background: var(--mango-soft);
+      box-shadow: inset 0 0 0 0.7mm var(--mango), inset 0 0 0 2mm var(--paper);
+      color: var(--ocean-dark);
+      text-align: center;
+    }
+
+    .day-stamp small {
+      display: block;
+      margin-bottom: 1.5mm;
+      color: color-mix(in oklch, var(--ocean-dark) 76%, var(--mango));
+      font-size: 7.5pt;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .editable-date {
+      display: block;
+      min-width: 25mm;
+      font-size: 10.5pt;
+      line-height: 1.35;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    [contenteditable="true"] {
+      border-radius: 4px;
+      cursor: text;
+    }
+
+    [contenteditable="true"]:focus {
+      background: color-mix(in oklch, var(--mango-soft) 75%, transparent);
+    }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 5mm;
+      min-height: 17mm;
+      padding: 3mm 0 2.5mm;
+    }
+
+    .today-focus {
+      min-width: 0;
+      font-family: var(--font-display);
+      font-size: 13pt;
+      line-height: 1.35;
+    }
+
+    .today-focus strong {
+      margin-right: 2mm;
+      color: var(--ocean-dark);
+      font-family: var(--font-ui);
+      font-size: 9pt;
+      letter-spacing: 0.04em;
+    }
+
+    .progress-copy {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 1mm;
+      color: var(--ocean-dark);
+      font-size: 9pt;
+      white-space: nowrap;
+    }
+
+    .progress-copy strong {
+      font-size: 16pt;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .task-heading {
+      display: grid;
+      grid-template-columns: 13mm 1fr 29mm;
+      align-items: end;
+      min-height: 9mm;
+      padding: 0 3mm 1.8mm;
+      color: var(--muted);
+      font-size: 8.5pt;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .task-heading span:last-child { text-align: center; }
+
+    .task-list {
+      margin: 0;
+      padding: 0;
+      border-top: 0.4mm solid var(--ocean-dark);
+      list-style: none;
+    }
+
+    .task-row {
+      --task-color: var(--ocean);
+      --task-soft: var(--ocean-soft);
+      display: grid;
+      grid-template-columns: 13mm minmax(0, 1fr) 29mm;
+      align-items: center;
+      min-height: 16mm;
+      border-bottom: 0.25mm solid var(--line);
+    }
+
+    .task-row[data-tone="mango"] { --task-color: var(--mango); --task-soft: var(--mango-soft); }
+    .task-row[data-tone="leaf"] { --task-color: var(--leaf); --task-soft: var(--leaf-soft); }
+    .task-row[data-tone="coral"] { --task-color: var(--coral); --task-soft: var(--coral-soft); }
+
+    .check-wrap {
+      display: grid;
+      place-items: center;
+      align-self: stretch;
+      background: color-mix(in oklch, var(--task-soft) 72%, var(--paper));
+    }
+
+    .check-button {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 8.5mm;
+      height: 8.5mm;
+      padding: 0;
+      border: 0.55mm solid var(--task-color);
+      border-radius: 50%;
+      background: var(--paper);
+      color: var(--paper);
+      cursor: pointer;
+      touch-action: manipulation;
+      transition-property: transform, opacity;
+      transition-duration: 150ms;
+      transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .check-button::after {
+      content: "✓";
+      font-family: var(--font-ui);
+      font-size: 15pt;
+      font-weight: 900;
+      line-height: 1;
+      opacity: 0;
+      transform: scale(0.3);
+      transition-property: transform, opacity;
+      transition-duration: 150ms;
+      transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .task-row.done .check-button {
+      background: var(--task-color);
+      transform: scale(1.04);
+    }
+
+    .task-row.done .check-button::after {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .task-copy {
+      min-width: 0;
+      padding: 2.2mm 4mm;
+    }
+
+    .task-text {
+      min-width: 10mm;
+      color: var(--ink);
+      font-family: var(--font-display);
+      font-size: 15.5pt;
+      line-height: 1.3;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+      text-wrap: pretty;
+    }
+
+    .task-row.done .task-text {
+      color: var(--muted);
+      text-decoration: line-through;
+      text-decoration-color: color-mix(in oklch, var(--task-color) 65%, transparent);
+      text-decoration-thickness: 0.35mm;
+    }
+
+    .task-list.compact .task-row { min-height: 12.2mm; }
+    .task-list.compact .task-text { font-size: 13.5pt; }
+    .task-list.compact .task-copy { padding-top: 1.4mm; padding-bottom: 1.4mm; }
+
+    .task-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5mm;
+      min-height: 100%;
+      padding: 1.5mm;
+    }
+
+    .task-tag {
+      max-width: 21mm;
+      padding: 1.4mm 2.2mm;
+      border-radius: var(--radius-pill);
+      background: var(--task-soft);
+      color: color-mix(in oklch, var(--task-color) 72%, var(--ink));
+      font-size: 8pt;
+      line-height: 1.2;
+      font-weight: 800;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    .delete-task {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 6mm;
+      height: 6mm;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12pt;
+      line-height: 1;
+      cursor: pointer;
+      opacity: 0.55;
+    }
+
+    @media (hover: hover) {
+      .delete-task:hover { opacity: 1; }
+      .check-button:hover { transform: scale(1.06); }
+      .task-row.done .check-button:hover { transform: scale(1.08); }
+    }
+
+    .reflection {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 5mm;
+      margin-top: 5mm;
+    }
+
+    .reflection-block {
+      min-height: 30mm;
+      padding: 3mm 4mm;
+      border-radius: var(--radius-md);
+      background: var(--ocean-soft);
+      box-shadow: inset 0 0 0 0.25mm color-mix(in oklch, var(--ocean) 35%, transparent);
+    }
+
+    .reflection-block.reward {
+      background: var(--mango-soft);
+      box-shadow: inset 0 0 0 0.25mm color-mix(in oklch, var(--mango) 55%, transparent);
+    }
+
+    .reflection-label {
+      margin: 0 0 2mm;
+      color: var(--ocean-dark);
+      font-size: 8.5pt;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+    }
+
+    .reflection-text {
+      min-height: 16mm;
+      font-family: var(--font-display);
+      font-size: 13.5pt;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
+    .rating {
+      display: flex;
+      align-items: center;
+      gap: 2.2mm;
+      margin-top: 1mm;
+    }
+
+    .star {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: color-mix(in oklch, var(--mango) 28%, var(--muted));
+      font-size: 20pt;
+      line-height: 1;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition-property: transform, opacity;
+      transition-duration: 120ms;
+    }
+
+    .star.active { color: var(--mango); }
+
+    .star:active { transform: scale(0.9); }
+
+    .sheet-footer {
+      position: absolute;
+      right: 15mm;
+      bottom: 8mm;
+      left: 15mm;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 8mm;
+      min-height: 12mm;
+      padding-top: 3mm;
+      color: var(--muted);
+      font-size: 8pt;
+    }
+
+    .signature {
+      color: var(--ink);
+      font-family: var(--font-display);
+      font-size: 11pt;
+      white-space: nowrap;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 40;
+      left: 50%;
+      bottom: 22px;
+      padding: 10px 15px;
+      border-radius: var(--radius-pill);
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 13px;
+      opacity: 0;
+      transform: translate(-50%, 10px);
+      pointer-events: none;
+      transition-property: transform, opacity;
+      transition-duration: 180ms;
+      transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    @media (max-width: 720px) {
+      .toolbar {
+        position: static;
+        align-items: flex-start;
+        padding: 14px 12px;
+      }
+
+      .toolbar-title { font-size: 17px; }
+      .toolbar-note { display: none; }
+      .toolbar-actions { gap: 6px; }
+      .button { padding: 0 12px; }
+      main { padding-top: 14px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @page { size: A4 portrait; margin: 0; }
+
+    @media print {
+      html, body {
+        width: 210mm;
+        min-width: 210mm;
+        min-height: 297mm;
+        background: white;
+      }
+
+      .skip-link,
+      .toolbar,
+      .toast,
+      .delete-task { display: none !important; }
+
+      main,
+      .sheet-scroller {
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+      }
+
+      .sheet {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0;
+        box-shadow: none;
+        break-after: avoid-page;
+        page-break-after: avoid;
+      }
+
+      [contenteditable="true"]:focus { background: transparent; }
+
+      .task-meta { padding-right: 3mm; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#checklist">跳到打卡清单</a>
+
+  <header class="toolbar" aria-label="打卡清单工具栏">
+    <div class="toolbar-copy">
+      <h1 class="toolbar-title">果仔的夏日成长清单</h1>
+      <p class="toolbar-note">点文字直接修改，内容会自动保存在这台设备上</p>
+    </div>
+    <div class="toolbar-actions">
+      <button class="button secondary" id="add-task" type="button">＋ 添加任务</button>
+      <button class="button secondary" id="clear-checks" type="button">清空打卡</button>
+      <button class="button" id="print-sheet" type="button">打印今日清单</button>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <div class="sheet-scroller">
+      <article class="sheet" id="checklist" aria-label="果仔的 A4 夏日成长清单">
+        <header class="masthead">
+          <div>
+            <p class="eyebrow">GUOZAI SUMMER CAMP</p>
+            <h2 class="paper-title" contenteditable="true" data-field="title" data-placeholder="输入标题">果仔的夏日成长清单</h2>
+            <p class="paper-subtitle" contenteditable="true" data-field="subtitle" data-placeholder="输入一句鼓励的话">认真完成每一件小事，就是今天最棒的成长。</p>
+          </div>
+          <div class="day-stamp">
+            <div>
+              <small>TODAY</small>
+              <span class="editable-date" contenteditable="true" data-field="date" data-placeholder="填写日期"></span>
+            </div>
+          </div>
+        </header>
+
+        <section class="status-strip" aria-label="今日目标和进度">
+          <div class="today-focus">
+            <strong>今日目标</strong>
+            <span contenteditable="true" data-field="focus" data-placeholder="例如：专心、有耐心">专心完成，做完一项再做下一项</span>
+          </div>
+          <div class="progress-copy" aria-live="polite">
+            已完成 <strong id="done-count">0</strong> / <span id="total-count">0</span>
+          </div>
+        </section>
+
+        <div class="task-heading" aria-hidden="true">
+          <span>打卡</span>
+          <span>今天要做的事</span>
+          <span>分类</span>
+        </div>
+        <ol class="task-list" id="task-list"></ol>
+
+        <section class="reflection" aria-label="今日回顾">
+          <div class="reflection-block">
+            <p class="reflection-label">今天我最满意的一件事</p>
+            <div class="reflection-text" contenteditable="true" data-field="reflection" data-placeholder="写下今天的小成就">写下今天的小成就……</div>
+          </div>
+          <div class="reflection-block reward">
+            <p class="reflection-label">今日自评</p>
+            <div class="rating" id="rating" aria-label="今日自评，满分五颗星"></div>
+            <p class="reflection-label" style="margin-top: 2.5mm;">完成后的奖励</p>
+            <div class="reflection-text" contenteditable="true" data-field="reward" data-placeholder="填写小奖励">自由玩 30 分钟</div>
+          </div>
+        </section>
+
+        <footer class="sheet-footer">
+          <span>每一天都不必完美，只要比昨天进步一点点。</span>
+          <span class="signature">家长签字：____________</span>
+        </footer>
+      </article>
+    </div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE_KEY = "guozai-summer-todo-v1";
+      const tones = ["ocean", "mango", "leaf", "coral"];
+      const defaultTasks = [
+        { text: "早起洗漱，整理好自己的床铺", tag: "好习惯", tone: "ocean" },
+        { text: "大声朗读或阅读 30 分钟", tag: "阅读", tone: "mango" },
+        { text: "完成一页数学计算练习", tag: "数学", tone: "leaf" },
+        { text: "认真练字或完成一项语文任务", tag: "语文", tone: "coral" },
+        { text: "英语听读 20 分钟", tag: "英语", tone: "ocean" },
+        { text: "户外运动 60 分钟", tag: "运动", tone: "mango" },
+        { text: "做一件力所能及的家务", tag: "生活", tone: "leaf" },
+        { text: "整理书桌和自己的物品", tag: "整理", tone: "coral" },
+        { text: "睡前回顾今天，准备明天的用品", tag: "复盘", tone: "ocean" }
+      ];
+
+      const taskList = document.querySelector("#task-list");
+      const doneCount = document.querySelector("#done-count");
+      const totalCount = document.querySelector("#total-count");
+      const rating = document.querySelector("#rating");
+      const toast = document.querySelector("#toast");
+      let toastTimer = 0;
+
+      const todayText = () => {
+        const now = new Date();
+        const weekdays = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+        return `${now.getMonth() + 1}月${now.getDate()}日\n${weekdays[now.getDay()]}`;
+      };
+
+      const freshState = () => ({
+        fields: {
+          title: "果仔的夏日成长清单",
+          subtitle: "认真完成每一件小事，就是今天最棒的成长。",
+          date: todayText(),
+          focus: "专心完成，做完一项再做下一项",
+          reflection: "写下今天的小成就……",
+          reward: "自由玩 30 分钟"
+        },
+        rating: 0,
+        tasks: defaultTasks.map((task, index) => ({ ...task, id: `default-${index}`, done: false }))
+      });
+
+      function loadState() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (saved && Array.isArray(saved.tasks) && saved.fields) return saved;
+        } catch (error) {
+          console.warn("无法读取已保存的清单", error);
+        }
+        return freshState();
+      }
+
+      let state = loadState();
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (error) {
+          console.warn("无法保存清单", error);
+          showToast("当前浏览器无法自动保存");
+        }
+      }
+
+      function showToast(message) {
+        window.clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add("show");
+        toastTimer = window.setTimeout(() => toast.classList.remove("show"), 1600);
+      }
+
+      function updateProgress() {
+        const completed = state.tasks.filter(task => task.done).length;
+        doneCount.textContent = completed;
+        totalCount.textContent = state.tasks.length;
+      }
+
+      function renderTasks() {
+        taskList.replaceChildren();
+        taskList.classList.toggle("compact", state.tasks.length > 9);
+
+        state.tasks.forEach((task, index) => {
+          const row = document.createElement("li");
+          row.className = `task-row${task.done ? " done" : ""}`;
+          row.dataset.id = task.id;
+          row.dataset.tone = task.tone || tones[index % tones.length];
+
+          const checkWrap = document.createElement("div");
+          checkWrap.className = "check-wrap";
+
+          const checkButton = document.createElement("button");
+          checkButton.className = "check-button";
+          checkButton.type = "button";
+          checkButton.setAttribute("aria-label", task.done ? `取消完成：${task.text}` : `标记完成：${task.text}`);
+          checkButton.setAttribute("aria-pressed", String(task.done));
+          checkButton.addEventListener("click", () => toggleTask(task.id));
+          checkWrap.append(checkButton);
+
+          const copy = document.createElement("div");
+          copy.className = "task-copy";
+          const text = document.createElement("div");
+          text.className = "task-text";
+          text.contentEditable = "true";
+          text.spellcheck = false;
+          text.textContent = task.text;
+          text.dataset.placeholder = "输入任务";
+          text.addEventListener("input", () => {
+            task.text = text.textContent.trim();
+            checkButton.setAttribute("aria-label", task.done ? `取消完成：${task.text}` : `标记完成：${task.text}`);
+            saveState();
+          });
+          copy.append(text);
+
+          const meta = document.createElement("div");
+          meta.className = "task-meta";
+          const tag = document.createElement("span");
+          tag.className = "task-tag";
+          tag.contentEditable = "true";
+          tag.spellcheck = false;
+          tag.textContent = task.tag;
+          tag.dataset.placeholder = "分类";
+          tag.addEventListener("input", () => {
+            task.tag = tag.textContent.trim();
+            saveState();
+          });
+
+          const deleteButton = document.createElement("button");
+          deleteButton.className = "delete-task";
+          deleteButton.type = "button";
+          deleteButton.textContent = "×";
+          deleteButton.setAttribute("aria-label", `删除任务：${task.text}`);
+          deleteButton.addEventListener("click", () => deleteTask(task.id));
+          meta.append(tag, deleteButton);
+
+          row.append(checkWrap, copy, meta);
+          taskList.append(row);
+        });
+
+        updateProgress();
+      }
+
+      function toggleTask(id) {
+        const task = state.tasks.find(item => item.id === id);
+        if (!task) return;
+        task.done = !task.done;
+        saveState();
+        renderTasks();
+        if (task.done) showToast("完成一项，继续保持");
+      }
+
+      function deleteTask(id) {
+        if (state.tasks.length <= 1) {
+          showToast("至少保留一项任务");
+          return;
+        }
+        state.tasks = state.tasks.filter(task => task.id !== id);
+        saveState();
+        renderTasks();
+      }
+
+      function addTask() {
+        if (state.tasks.length >= 12) {
+          showToast("A4 大字版最多放 12 项任务");
+          return;
+        }
+        const index = state.tasks.length;
+        state.tasks.push({
+          id: `custom-${Date.now()}`,
+          text: "点击这里输入新任务",
+          tag: "自定义",
+          tone: tones[index % tones.length],
+          done: false
+        });
+        saveState();
+        renderTasks();
+        const latest = taskList.lastElementChild?.querySelector(".task-text");
+        latest?.focus();
+        document.getSelection()?.selectAllChildren(latest);
+      }
+
+      function clearChecks() {
+        state.tasks.forEach(task => { task.done = false; });
+        saveState();
+        renderTasks();
+        showToast("打卡已清空，任务内容已保留");
+      }
+
+      function renderFields() {
+        document.querySelectorAll("[data-field]").forEach(element => {
+          const field = element.dataset.field;
+          element.textContent = state.fields[field] ?? "";
+          element.addEventListener("input", () => {
+            state.fields[field] = element.textContent.trim();
+            saveState();
+          });
+        });
+      }
+
+      function renderRating() {
+        rating.replaceChildren();
+        for (let value = 1; value <= 5; value += 1) {
+          const star = document.createElement("button");
+          star.type = "button";
+          star.className = `star${value <= state.rating ? " active" : ""}`;
+          star.textContent = value <= state.rating ? "★" : "☆";
+          star.setAttribute("aria-label", `${value} 星`);
+          star.setAttribute("aria-pressed", String(value <= state.rating));
+          star.addEventListener("click", () => {
+            state.rating = state.rating === value ? 0 : value;
+            saveState();
+            renderRating();
+          });
+          rating.append(star);
+        }
+      }
+
+      document.querySelector("#add-task").addEventListener("click", addTask);
+      document.querySelector("#clear-checks").addEventListener("click", clearChecks);
+      document.querySelector("#print-sheet").addEventListener("click", () => window.print());
+
+      renderFields();
+      renderTasks();
+      renderRating();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Swift Package Manager
+.build/
+**/.build/
+.swiftpm/
+**/.swiftpm/
+
+# Xcode build output and per-user state
+DerivedData/
+**/DerivedData/
+build/
+**/build/
+xcuserdata/
+**/xcuserdata/
+*.xcuserstate
+
+# Local environment and signing material
+.env
+.env.*
+*.p12
+*.mobileprovision
+*.cer
+*.pem
+*.key

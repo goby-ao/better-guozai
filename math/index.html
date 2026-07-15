@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>二升三暑期数学计算练习卷</title>
+  <style>
+    :root {
+      --canvas: oklch(0.95 0.012 91);
+      --paper: oklch(0.995 0.003 95);
+      --ink: oklch(0.29 0.028 235);
+      --muted: oklch(0.52 0.025 225);
+      --accent: oklch(0.53 0.095 212);
+      --accent-deep: oklch(0.40 0.085 214);
+      --accent-soft: oklch(0.95 0.035 205);
+      --accent-faint: oklch(0.98 0.014 205);
+      --line: oklch(0.83 0.025 215);
+      --line-light: oklch(0.91 0.014 215);
+      --button-ink: oklch(0.99 0.003 95);
+      --shadow: 0 18px 55px color-mix(in oklch, var(--ink) 14%, transparent),
+                0 2px 8px color-mix(in oklch, var(--ink) 8%, transparent);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --font-cn: "Kaiti SC", STKaiti, KaiTi, "楷体", serif;
+      --font-ui: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--font-ui);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 20% 4%, color-mix(in oklch, var(--accent-soft) 65%, transparent) 0 13rem, transparent 13.2rem),
+        var(--canvas);
+    }
+
+    button { font: inherit; }
+
+    .skip-link {
+      position: fixed;
+      z-index: 20;
+      top: 8px;
+      left: 8px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--ink);
+      color: white;
+      transform: translateY(-140%);
+      transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .skip-link:focus { transform: translateY(0); }
+
+    .toolbar {
+      position: sticky;
+      z-index: 10;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 72px;
+      padding: 12px max(18px, calc((100vw - 210mm) / 2));
+      background: color-mix(in oklch, var(--canvas) 94%, transparent);
+      box-shadow: 0 1px 0 color-mix(in oklch, var(--ink) 9%, transparent);
+    }
+
+    .toolbar-copy { min-width: 0; }
+
+    .toolbar-title {
+      margin: 0;
+      color: var(--accent-deep);
+      font-family: var(--font-cn);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.012em;
+      text-wrap: balance;
+    }
+
+    .toolbar-meta {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 9px;
+    }
+
+    .button {
+      min-height: 44px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: var(--radius-md);
+      color: var(--button-ink);
+      background: var(--accent-deep);
+      box-shadow: 0 4px 12px color-mix(in oklch, var(--accent-deep) 22%, transparent);
+      cursor: pointer;
+      touch-action: manipulation;
+      transition-property: transform, opacity;
+      transition-duration: 150ms;
+      transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .button.secondary {
+      color: var(--accent-deep);
+      background: var(--paper);
+      box-shadow: inset 0 0 0 1px var(--line), 0 2px 7px color-mix(in oklch, var(--ink) 8%, transparent);
+    }
+
+    .button:active { transform: scale(0.96); }
+
+    .button:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid color-mix(in oklch, var(--accent) 45%, transparent);
+      outline-offset: 3px;
+    }
+
+    @media (hover: hover) {
+      .button:hover { transform: translateY(-1px); }
+      .button:active { transform: translateY(0) scale(0.96); }
+    }
+
+    main { padding: 26px 12px 48px; }
+
+    .sheet-scroller {
+      overflow-x: auto;
+      padding: 0 0 18px;
+      overscroll-behavior: contain;
+    }
+
+    .sheet {
+      width: 210mm;
+      height: 297mm;
+      margin: 0 auto;
+      padding: 12mm 20mm;
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+      color: var(--ink);
+      font-family: var(--font-cn);
+      font-variant-numeric: tabular-nums;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+
+    .masthead {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      gap: 8mm;
+      height: 8mm;
+      border-bottom: 0.45mm solid var(--accent);
+    }
+
+    .paper-title {
+      margin: 0 0 1.2mm;
+      color: var(--accent-deep);
+      font-size: 16pt;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: -0.012em;
+      white-space: nowrap;
+    }
+
+    .student-info {
+      margin: 0 0 1.2mm;
+      color: var(--ink);
+      font-size: 9pt;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .guide {
+      min-height: 13mm;
+      padding: 1.8mm 2.4mm 1.6mm;
+      background: var(--accent-faint);
+      box-shadow: inset 0 0 0 0.25mm var(--line);
+      font-size: 10.5pt;
+      line-height: 1.18;
+      text-align: justify;
+      text-justify: inter-ideograph;
+      overflow: hidden;
+    }
+
+    .guide strong { color: var(--accent-deep); }
+
+    .paper-section { margin: 0; }
+
+    .section-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 3mm;
+      height: 6.5mm;
+      margin: 0;
+      padding: 1.15mm 2.2mm 0;
+      background: var(--accent-soft);
+      color: var(--accent-deep);
+      font-size: 11.5pt;
+      line-height: 1;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .section-heading small {
+      color: color-mix(in oklch, var(--accent-deep) 78%, var(--accent));
+      font-size: 8.5pt;
+      font-weight: 400;
+    }
+
+    .mental-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-auto-rows: 7mm;
+      height: 70mm;
+    }
+
+    .mental-item {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      padding: 0 1.4mm;
+      border-bottom: 0.18mm dotted var(--line-light);
+      font-size: 14pt;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .problem-number {
+      display: inline-block;
+      flex: 0 0 6mm;
+      color: var(--muted);
+      font-size: 8pt;
+      text-align: right;
+      margin-right: 1.2mm;
+    }
+
+    .mixed-grid,
+    .vertical-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      border-top: 0.25mm solid var(--line);
+      border-left: 0.25mm solid var(--line);
+    }
+
+    .mixed-grid { grid-auto-rows: 30mm; height: 60mm; }
+    .vertical-grid { grid-auto-rows: 46mm; height: 92mm; }
+
+    .work-item {
+      position: relative;
+      padding: 2.3mm 3mm;
+      border-right: 0.25mm solid var(--line);
+      border-bottom: 0.25mm solid var(--line);
+      font-size: 14pt;
+      line-height: 1;
+      overflow: hidden;
+    }
+
+    .work-item .problem-number {
+      width: auto;
+      margin-right: 1.5mm;
+    }
+
+    .writing-lines {
+      position: absolute;
+      left: 9mm;
+      right: 3mm;
+      top: 13mm;
+      display: grid;
+      gap: 7mm;
+    }
+
+    .writing-lines i {
+      display: block;
+      border-bottom: 0.2mm solid var(--line);
+    }
+
+    .sheet-mark {
+      display: none;
+      position: absolute;
+      right: 7mm;
+      bottom: 5mm;
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 7pt;
+    }
+
+    .answer-panel {
+      width: min(210mm, calc(100vw - 24px));
+      margin: 18px auto 0;
+      border-radius: var(--radius-lg);
+      background: var(--paper);
+      box-shadow: 0 8px 28px color-mix(in oklch, var(--ink) 10%, transparent);
+      overflow: hidden;
+    }
+
+    .answer-panel summary {
+      min-height: 48px;
+      padding: 14px 18px;
+      color: var(--accent-deep);
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .answers {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1px;
+      padding: 1px;
+      background: var(--line-light);
+    }
+
+    .answer-group {
+      min-width: 0;
+      padding: 14px 16px;
+      background: var(--paper);
+    }
+
+    .answer-group h3 {
+      margin: 0 0 7px;
+      color: var(--accent-deep);
+      font-family: var(--font-cn);
+      font-size: 16px;
+    }
+
+    .answer-group p {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--font-cn);
+      font-size: 14px;
+      line-height: 1.65;
+      overflow-wrap: anywhere;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 30;
+      left: 50%;
+      bottom: 22px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 13px;
+      opacity: 0;
+      transform: translate(-50%, 10px);
+      pointer-events: none;
+      transition-property: transform, opacity;
+      transition-duration: 180ms;
+      transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    @media (max-width: 720px) {
+      .toolbar {
+        position: static;
+        align-items: flex-start;
+        padding: 14px 12px;
+      }
+
+      .toolbar-title { font-size: 17px; }
+      .toolbar-actions { gap: 6px; }
+      .button { padding: 0 12px; }
+      main { padding-top: 14px; }
+      .answers { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @page { size: A4 portrait; margin: 0; }
+
+    @media print {
+      html, body {
+        width: 210mm;
+        height: 297mm;
+        background: white;
+      }
+
+      .skip-link,
+      .toolbar,
+      .answer-panel,
+      .toast { display: none !important; }
+
+      main,
+      .sheet-scroller {
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+      }
+
+      .sheet {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
+        box-shadow: none;
+        break-after: avoid-page;
+        page-break-after: avoid;
+      }
+
+      .sheet-mark { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#worksheet">跳到练习卷</a>
+
+  <header class="toolbar" aria-label="练习卷工具栏">
+    <div class="toolbar-copy">
+      <h1 class="toolbar-title">二升三暑期数学计算练习卷</h1>
+      <p class="toolbar-meta">当前题号：<span id="set-id">读取中</span>，刷新页面也会生成新题</p>
+    </div>
+    <div class="toolbar-actions">
+      <button class="button secondary" id="new-set" type="button">↻ 换一套新题</button>
+      <button class="button" id="print-sheet" type="button">打印练习卷</button>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <div class="sheet-scroller">
+      <article class="sheet" id="worksheet" aria-label="A4 数学计算练习卷">
+        <header class="masthead">
+          <h2 class="paper-title">二升三 · 暑期数学计算练习卷</h2>
+          <p class="student-info">姓名：________　日期：____月____日　用时：____分</p>
+        </header>
+
+        <aside class="guide" aria-label="暑期计算练习建议与要求">
+          <strong>【暑期计算练习建议与要求】</strong>
+          每天1篇，10至15分钟。口算脑算直接写得数，严禁数手指；递等式写两步并对齐等号；竖式数位对齐，写清进退位。目标：口算最多错1题，递等式和竖式全对。
+        </aside>
+
+        <section class="paper-section" aria-labelledby="mental-title">
+          <h3 class="section-heading" id="mental-title">
+            <span>第一板块　口算练习</span>
+            <small>共30题｜3分钟｜脑算直接写得数</small>
+          </h3>
+          <div class="mental-grid" id="mental-grid"></div>
+        </section>
+
+        <section class="paper-section" aria-labelledby="mixed-title">
+          <h3 class="section-heading" id="mixed-title">
+            <span>第二板块　递等式计算</span>
+            <small>共4题｜建议4分钟｜写两步，等号对齐</small>
+          </h3>
+          <div class="mixed-grid" id="mixed-grid"></div>
+        </section>
+
+        <section class="paper-section" aria-labelledby="vertical-title">
+          <h3 class="section-heading" id="vertical-title">
+            <span>第三板块　笔算竖式</span>
+            <small>共4题｜建议4分钟｜数位对齐，写清进退位</small>
+          </h3>
+          <div class="vertical-grid" id="vertical-grid"></div>
+        </section>
+
+        <span class="sheet-mark" id="print-set-id"></span>
+      </article>
+    </div>
+
+    <details class="answer-panel">
+      <summary>家长核对答案，打印时自动隐藏</summary>
+      <div class="answers" id="answers"></div>
+    </details>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const mentalGrid = document.querySelector("#mental-grid");
+      const mixedGrid = document.querySelector("#mixed-grid");
+      const verticalGrid = document.querySelector("#vertical-grid");
+      const answers = document.querySelector("#answers");
+      const setId = document.querySelector("#set-id");
+      const printSetId = document.querySelector("#print-set-id");
+      const toast = document.querySelector("#toast");
+      let toastTimer = 0;
+
+      const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+      const choice = list => list[randomInt(0, list.length - 1)];
+
+      function shuffle(list) {
+        const copy = [...list];
+        for (let index = copy.length - 1; index > 0; index -= 1) {
+          const target = randomInt(0, index);
+          [copy[index], copy[target]] = [copy[target], copy[index]];
+        }
+        return copy;
+      }
+
+      function makeInverse() {
+        const a = randomInt(2, 9);
+        const b = randomInt(2, 9);
+        const product = a * b;
+        const variants = [
+          { text: `(　) × ${b} = ${product}`, answer: a },
+          { text: `${a} × (　) = ${product}`, answer: b },
+          { text: `(　) ÷ ${b} = ${a}`, answer: product },
+          { text: `${product} ÷ (　) = ${a}`, answer: b }
+        ];
+        return choice(variants);
+      }
+
+      function makeRemainder() {
+        const divisor = randomInt(3, 9);
+        const quotient = randomInt(3, 9);
+        const remainder = randomInt(1, divisor - 1);
+        const dividend = divisor * quotient + remainder;
+        return { text: `${dividend} ÷ ${divisor} =`, answer: `${quotient}……${remainder}` };
+      }
+
+      function makeTwoDigit() {
+        if (Math.random() < 0.5) {
+          while (true) {
+            const a = randomInt(18, 79);
+            const b = randomInt(12, 79);
+            if (a + b <= 100 && ((a % 10) + (b % 10) >= 10 || Math.random() < 0.35)) {
+              return { text: `${a} + ${b} =`, answer: a + b };
+            }
+          }
+        }
+        const a = randomInt(35, 99);
+        const b = randomInt(11, a - 1);
+        return { text: `${a} - ${b} =`, answer: a - b };
+      }
+
+      function uniqueProblems(count, factory, seen) {
+        const result = [];
+        while (result.length < count) {
+          const problem = factory();
+          if (!seen.has(problem.text)) {
+            seen.add(problem.text);
+            result.push(problem);
+          }
+        }
+        return result;
+      }
+
+      function generateMental() {
+        const seen = new Set();
+        return shuffle([
+          ...uniqueProblems(10, makeInverse, seen),
+          ...uniqueProblems(7, makeRemainder, seen),
+          ...uniqueProblems(13, makeTwoDigit, seen)
+        ]);
+      }
+
+      function generateMixed() {
+        const a = randomInt(25, 58);
+        const b = randomInt(3, 8);
+        const c = randomInt(4, 9);
+        const p1 = {
+          text: `${a} + ${b} × ${c} =`,
+          answer: a + b * c,
+          steps: [`= ${a} + ${b * c}`, `= ${a + b * c}`]
+        };
+
+        const divisor = randomInt(3, 8);
+        const quotient = randomInt(4, 9);
+        const dividend = divisor * quotient;
+        const total = randomInt(quotient + 25, 95);
+        const p2 = {
+          text: `${total} - ${dividend} ÷ ${divisor} =`,
+          answer: total - quotient,
+          steps: [`= ${total} - ${quotient}`, `= ${total - quotient}`]
+        };
+
+        const bracketResult = randomInt(3, 9);
+        const exactQuotient = randomInt(4, 9);
+        const exactDividend = bracketResult * exactQuotient;
+        const left = randomInt(bracketResult + 6, bracketResult + 20);
+        const right = left - bracketResult;
+        const p3 = {
+          text: `${exactDividend} ÷ (${left} - ${right}) =`,
+          answer: exactQuotient,
+          steps: [`= ${exactDividend} ÷ ${bracketResult}`, `= ${exactQuotient}`]
+        };
+
+        let x;
+        let y;
+        let multiplier;
+        do {
+          x = randomInt(18, 34);
+          y = randomInt(6, x - 4);
+          multiplier = randomInt(3, 7);
+        } while ((x - y) * multiplier > 100);
+        const p4 = {
+          text: `(${x} - ${y}) × ${multiplier} =`,
+          answer: (x - y) * multiplier,
+          steps: [`= ${x - y} × ${multiplier}`, `= ${(x - y) * multiplier}`]
+        };
+        return [p1, p2, p3, p4];
+      }
+
+      function continuousCarry() {
+        while (true) {
+          const a = randomInt(245, 789);
+          const b = randomInt(145, 689);
+          const onesCarry = (a % 10) + (b % 10) >= 10;
+          const tensCarry = (Math.floor(a / 10) % 10) + (Math.floor(b / 10) % 10) + 1 >= 10;
+          if (a + b <= 999 && onesCarry && tensCarry) {
+            return { text: `${a} + ${b} =`, answer: a + b };
+          }
+        }
+      }
+
+      function continuousBorrow() {
+        while (true) {
+          const a = randomInt(412, 987);
+          const b = randomInt(123, a - 50);
+          const onesBorrow = a % 10 < b % 10;
+          const tensBorrow = (Math.floor(a / 10) % 10) - 1 < Math.floor(b / 10) % 10;
+          if (onesBorrow && tensBorrow) return { text: `${a} - ${b} =`, answer: a - b };
+        }
+      }
+
+      function zeroBorrow() {
+        while (true) {
+          const hundreds = randomInt(5, 9);
+          const minuend = hundreds * 100 + randomInt(1, 8);
+          const subtrahend = randomInt(215, minuend - 110);
+          if (subtrahend % 10 > minuend % 10 && Math.floor(subtrahend / 10) % 10 !== 0) {
+            return { text: `${minuend} - ${subtrahend} =`, answer: minuend - subtrahend };
+          }
+        }
+      }
+
+      function twoDigitTimesOneDigit() {
+        while (true) {
+          const multiplicand = randomInt(24, 89);
+          const multiplier = randomInt(3, 9);
+          const hasCarry = (multiplicand % 10) * multiplier >= 10;
+          if (hasCarry) {
+            return {
+              text: `${multiplicand} × ${multiplier} =`,
+              answer: multiplicand * multiplier
+            };
+          }
+        }
+      }
+
+      function generateVertical() {
+        return [continuousCarry(), continuousBorrow(), twoDigitTimesOneDigit(), zeroBorrow()];
+      }
+
+      function renderProblemGrid(container, problems, className, withLines = false) {
+        container.replaceChildren(...problems.map((problem, index) => {
+          const item = document.createElement("div");
+          item.className = className;
+
+          const number = document.createElement("span");
+          number.className = "problem-number";
+          number.textContent = `${index + 1}.`;
+
+          const expression = document.createElement("span");
+          expression.textContent = problem.text;
+          item.append(number, expression);
+
+          if (withLines) {
+            const lines = document.createElement("div");
+            lines.className = "writing-lines";
+            lines.setAttribute("aria-hidden", "true");
+            lines.append(document.createElement("i"), document.createElement("i"));
+            item.append(lines);
+          }
+          return item;
+        }));
+      }
+
+      function answerText(problems, includeSteps = false) {
+        return problems.map((problem, index) => {
+          if (includeSteps) return `${index + 1}. ${problem.steps.join("　")} `;
+          return `${index + 1}. ${problem.answer}`;
+        }).join("　　");
+      }
+
+      function renderAnswers(mental, mixed, vertical) {
+        const groups = [
+          ["口算练习", answerText(mental)],
+          ["递等式计算", answerText(mixed, true)],
+          ["笔算竖式", answerText(vertical)]
+        ];
+        answers.replaceChildren(...groups.map(([title, text]) => {
+          const group = document.createElement("section");
+          group.className = "answer-group";
+          const heading = document.createElement("h3");
+          heading.textContent = title;
+          const content = document.createElement("p");
+          content.textContent = text;
+          group.append(heading, content);
+          return group;
+        }));
+      }
+
+      function showToast(message) {
+        window.clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add("show");
+        toastTimer = window.setTimeout(() => toast.classList.remove("show"), 1400);
+      }
+
+      function newSet(announce = true) {
+        const mental = generateMental();
+        const mixed = generateMixed();
+        const vertical = generateVertical();
+        const datePart = new Date().toLocaleString("zh-CN", {
+          month: "2-digit",
+          day: "2-digit",
+          hour12: false
+        }).replace(/\D/g, "");
+        const randomCode = new Uint16Array(1);
+        crypto.getRandomValues(randomCode);
+        const id = `${datePart}-${String(randomCode[0] % 10000).padStart(4, "0")}`;
+
+        renderProblemGrid(mentalGrid, mental, "mental-item");
+        renderProblemGrid(mixedGrid, mixed, "work-item", true);
+        renderProblemGrid(verticalGrid, vertical, "work-item");
+        renderAnswers(mental, mixed, vertical);
+        setId.textContent = id;
+        printSetId.textContent = `题号 ${id}`;
+        if (announce) showToast("已生成一套新题");
+      }
+
+      document.querySelector("#new-set").addEventListener("click", () => newSet(true));
+      document.querySelector("#print-sheet").addEventListener("click", () => window.print());
+      newSet(false);
+    })();
+  </script>
+</body>
+</html>
