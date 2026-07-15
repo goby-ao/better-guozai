@@ -7,6 +7,23 @@ struct CompletionPraiseMoment: Identifiable, Equatable {
     let title: String
     let message: String
     let isDayAchieved: Bool
+    let gardenProgress: GrowthGardenProgress?
+
+    init(
+        taskID: UUID,
+        taskTitle: String,
+        title: String,
+        message: String,
+        isDayAchieved: Bool,
+        gardenProgress: GrowthGardenProgress? = nil
+    ) {
+        self.taskID = taskID
+        self.taskTitle = taskTitle
+        self.title = title
+        self.message = message
+        self.isDayAchieved = isDayAchieved
+        self.gardenProgress = gardenProgress
+    }
 }
 
 struct CompletionPraiseOverlay: View {
@@ -22,18 +39,7 @@ struct CompletionPraiseOverlay: View {
             }
 
             VStack(spacing: GuozaiSpacing.small) {
-                Image("GuozaiMascot")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: moment.isDayAchieved ? 132 : 116, height: moment.isDayAchieved ? 132 : 116)
-                    .clipShape(Circle())
-                    .overlay {
-                        Circle()
-                            .stroke(GuozaiColor.mango.opacity(0.45), lineWidth: 2)
-                    }
-                    .rotationEffect(.degrees(reduceMotion ? 0 : isCelebrating ? 3 : -8))
-                    .scaleEffect(reduceMotion ? 1 : isCelebrating ? 1 : 0.72)
-                    .offset(y: reduceMotion ? 0 : isCelebrating ? -3 : 12)
+                celebrationHero
 
                 Text(moment.title)
                     .font(.system(.title2, design: .rounded, weight: .heavy))
@@ -66,7 +72,7 @@ struct CompletionPraiseOverlay: View {
         .padding(.horizontal, GuozaiSpacing.xLarge)
         .onAppear {
             guard !reduceMotion else { return }
-            withAnimation(.spring(response: 0.52, dampingFraction: 0.62)) {
+            withAnimation(.easeOut(duration: 0.5)) {
                 isCelebrating = true
             }
         }
@@ -75,6 +81,29 @@ struct CompletionPraiseOverlay: View {
 
     private var backgroundColor: Color {
         moment.isDayAchieved ? GuozaiColor.mangoSoft : GuozaiColor.paper
+    }
+
+    @ViewBuilder
+    private var celebrationHero: some View {
+        if let progress = moment.gardenProgress {
+            GrowthPlantIllustration(progress: progress, compact: true)
+                .frame(width: 176, height: 132)
+                .scaleEffect(reduceMotion ? 1 : isCelebrating ? 1 : 0.78)
+                .offset(y: reduceMotion ? 0 : isCelebrating ? 0 : 10)
+        } else {
+            Image("GuozaiMascot")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 116, height: 116)
+                .clipShape(Circle())
+                .overlay {
+                    Circle()
+                        .stroke(GuozaiColor.mango.opacity(0.45), lineWidth: 2)
+                }
+                .rotationEffect(.degrees(reduceMotion ? 0 : isCelebrating ? 3 : -8))
+                .scaleEffect(reduceMotion ? 1 : isCelebrating ? 1 : 0.72)
+                .offset(y: reduceMotion ? 0 : isCelebrating ? -3 : 12)
+        }
     }
 
     private var celebrationParticles: some View {
@@ -90,7 +119,7 @@ struct CompletionPraiseOverlay: View {
                 )
                 .opacity(isCelebrating ? 1 : 0)
                 .animation(
-                    .spring(response: 0.48, dampingFraction: 0.68)
+                    .easeOut(duration: 0.48)
                         .delay(Double(index) * 0.035),
                     value: isCelebrating
                 )
@@ -122,8 +151,8 @@ struct CompletionPraiseOverlay: View {
             moment: CompletionPraiseMoment(
                 taskID: UUID(),
                 taskTitle: "大声朗读或阅读 30 分钟",
-                title: "果仔真棒！",
-                message: "又向前迈了一小步！",
+                title: "一步一步，完成了",
+                message: "你按计划完成了刚才的任务。",
                 isDayAchieved: false
             )
         )
@@ -137,9 +166,10 @@ struct CompletionPraiseOverlay: View {
             moment: CompletionPraiseMoment(
                 taskID: UUID(),
                 taskTitle: "户外运动 60 分钟",
-                title: "今日达成！",
-                message: "必做任务全部完成，今天的星星亮起来啦！",
-                isDayAchieved: true
+                title: "今天的计划完成了",
+                message: "你一项一项完成了今天的计划，小树也长大了一步。",
+                isDayAchieved: true,
+                gardenProgress: GrowthGardenProgress(achievedDayCount: 14)
             )
         )
     }

@@ -42,6 +42,20 @@ struct BadgesView: View {
             .joined(separator: "|")
     }
 
+    private var achievedThisWeek: Int {
+        AchievementStore.currentWeekAchievedDayCount(
+            tasks: profileTasks,
+            today: LocalDay(date: .now)
+        )
+    }
+
+    private var weeklyWishUnlockedThisWeek: Bool {
+        WishRewardStore.hasUnlockedWeeklyWish(
+            in: profileRewards,
+            weekContaining: LocalDay(date: .now)
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: GuozaiSpacing.xLarge) {
@@ -86,7 +100,12 @@ struct BadgesView: View {
                     }
                 }
 
-                WishRewardsSection(rewards: profileRewards)
+                WishRewardsSection(
+                    rewards: profileRewards,
+                    achievedThisWeek: achievedThisWeek,
+                    weeklyWishUnlockedThisWeek: weeklyWishUnlockedThisWeek,
+                    onSelect: selectWish
+                )
             }
             .frame(maxWidth: GuozaiLayout.readableContentWidth, alignment: .leading)
             .padding(.horizontal, GuozaiSpacing.large)
@@ -124,6 +143,18 @@ struct BadgesView: View {
             let profile = try SeedService.ensureSeeded(in: modelContext)
             newestAwards = try AchievementStore.evaluate(profileId: profile.id, in: modelContext)
         } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func selectWish(_ reward: WishRewardRecord) {
+        do {
+            guard let profileID else { return }
+            try WishRewardStore.select(reward, in: modelContext)
+            _ = try AchievementStore.evaluate(profileId: profileID, in: modelContext)
+        } catch {
+            modelContext.rollback()
             errorMessage = error.localizedDescription
         }
     }
@@ -265,11 +296,24 @@ private struct SpecialBadgeTile: View {
 
 private struct WishRewardsSection: View {
     let rewards: [WishRewardRecord]
+    let achievedThisWeek: Int
+    let weeklyWishUnlockedThisWeek: Bool
+    let onSelect: (WishRewardRecord) -> Void
+
+    private var sortedRewards: [WishRewardRecord] {
+        rewards.sorted { lhs, rhs in
+            let leftRank = sortRank(lhs)
+            let rightRank = sortRank(rhs)
+            return leftRank == rightRank ? lhs.createdAt < rhs.createdAt : leftRank < rightRank
+        }
+    }
 
     var body: some View {
         PaperSection(
             "心愿奖励",
-            subtitle: rewards.isEmpty ? "家长可以把一次特别体验设为成长后的惊喜。" : "努力会打开惊喜，但不需要用积分交换。",
+            subtitle: rewards.isEmpty
+                ? "家长可以把一次特别体验设为成长后的惊喜。"
+                : "选一个最期待的心愿，本周达成 5 天就能解锁。",
             systemImage: "gift.fill"
         ) {
             if rewards.isEmpty {
@@ -278,44 +322,197 @@ private struct WishRewardsSection: View {
                     .foregroundStyle(GuozaiColor.inkMuted)
                     .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
             } else {
-                VStack(spacing: GuozaiSpacing.medium) {
-                    ForEach(rewards) { reward in
-                        HStack(spacing: GuozaiSpacing.medium) {
-                            ZStack {
-                                Circle().fill(reward.state == .locked ? GuozaiColor.canvasWarm : GuozaiColor.mangoSoft)
-                                Image(systemName: reward.state == .claimed ? "gift.fill" : reward.state == .unlocked ? "party.popper.fill" : "sparkles")
-                                    .foregroundStyle(reward.state == .locked ? GuozaiColor.inkMuted : GuozaiColor.mango)
-                            }
-                            .frame(width: 52, height: 52)
+                VStack(spacing: 0) {
+                    ForEach(sortedRewards) { reward in
+                        WishRewardRow(
+                            reward: reward,
+                            achievedThisWeek: achievedThisWeek,
+                            weeklyWishUnlockedThisWeek: weeklyWishUnlockedThisWeek,
+                            onSelect: { onSelect(reward) }
+                        )
 
-                            VStack(alignment: .leading, spacing: GuozaiSpacing.xSmall) {
-                                Text(reward.title)
-                                    .guozaiTextStyle(.control)
-                                    .foregroundStyle(GuozaiColor.ink)
-                                if !reward.detail.isEmpty {
-                                    Text(reward.detail)
-                                        .font(.subheadline)
-                                        .foregroundStyle(GuozaiColor.inkMuted)
-                                }
-                            }
-                            Spacer()
-                            Text(stateTitle(reward.state))
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(reward.state == .locked ? GuozaiColor.inkMuted : GuozaiColor.oceanDeep)
+                        if reward.id != sortedRewards.last?.id {
+                            Divider()
+                                .overlay(GuozaiColor.line.opacity(0.7))
+                                .padding(.vertical, GuozaiSpacing.small)
                         }
-                        .frame(minHeight: 64)
-                        .accessibilityElement(children: .combine)
                     }
                 }
             }
         }
     }
 
-    private func stateTitle(_ state: StoredWishState) -> String {
-        switch state {
-        case .locked: "成长中"
+    private func sortRank(_ reward: WishRewardRecord) -> Int {
+        if reward.state == .locked, reward.weeklyTarget != nil, reward.selectedAt != nil { return 0 }
+        return switch reward.state {
+        case .locked: 1
+        case .unlocked: 2
+        case .claimed: 3
+        }
+    }
+}
+
+private struct WishRewardRow: View {
+    let reward: WishRewardRecord
+    let achievedThisWeek: Int
+    let weeklyWishUnlockedThisWeek: Bool
+    let onSelect: () -> Void
+
+    private var isWeeklyWish: Bool { reward.weeklyTarget != nil }
+    private var isCurrentWish: Bool {
+        reward.state == .locked && isWeeklyWish && reward.selectedAt != nil
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: GuozaiSpacing.medium) {
+            HStack(alignment: .top, spacing: GuozaiSpacing.medium) {
+                ZStack {
+                    Circle().fill(iconBackground)
+                    Image(systemName: stateSymbol)
+                        .font(.title3.bold())
+                        .foregroundStyle(stateTint)
+                }
+                .frame(width: 52, height: 52)
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: GuozaiSpacing.xSmall) {
+                    Text(reward.title)
+                        .guozaiTextStyle(.control)
+                        .foregroundStyle(GuozaiColor.ink)
+                    if !reward.detail.isEmpty {
+                        Text(reward.detail)
+                            .font(.subheadline)
+                            .foregroundStyle(GuozaiColor.inkMuted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if !isCurrentWish {
+                        Label(conditionTitle, systemImage: conditionSymbol)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(GuozaiColor.inkMuted)
+                    }
+                }
+
+                Spacer(minLength: GuozaiSpacing.small)
+
+                Text(stateTitle)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(stateTint)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(stateTint.opacity(0.12), in: Capsule())
+            }
+
+            if isCurrentWish {
+                WeeklyWishProgress(achievedCount: achievedThisWeek)
+            } else if reward.state == .locked, isWeeklyWish {
+                if weeklyWishUnlockedThisWeek {
+                    Label("本周已经解锁一个心愿，下周再来选择。", systemImage: "checkmark.seal.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(GuozaiColor.leaf)
+                        .frame(maxWidth: .infinity, minHeight: GuozaiLayout.minimumTouchTarget, alignment: .leading)
+                } else {
+                    Button(action: onSelect) {
+                        Label("选为本周心愿", systemImage: "heart.fill")
+                            .font(.body.weight(.bold))
+                            .frame(maxWidth: .infinity, minHeight: GuozaiLayout.minimumTouchTarget)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(GuozaiColor.leaf)
+                    .accessibilityHint("选中后，本周达成 5 天即可解锁")
+                }
+            }
+        }
+        .padding(isCurrentWish ? GuozaiSpacing.medium : 0)
+        .background(
+            isCurrentWish ? GuozaiColor.leafSoft.opacity(0.55) : Color.clear,
+            in: RoundedRectangle(cornerRadius: GuozaiRadius.control, style: .continuous)
+        )
+        .accessibilityElement(children: .contain)
+    }
+
+    private var conditionTitle: String {
+        if let badgeID = reward.linkedBadgeId, let code = BadgeCode(rawValue: badgeID) {
+            return "获得“\(BadgePresentation(code: code).title)”后解锁"
+        }
+        if isWeeklyWish {
+            return "选中后，本周达成 5 天解锁"
+        }
+        return "等待成长条件"
+    }
+
+    private var conditionSymbol: String {
+        reward.linkedBadgeId == nil ? "calendar.badge.checkmark" : "medal.fill"
+    }
+
+    private var stateTitle: String {
+        if isCurrentWish { return "本周心愿" }
+        return switch reward.state {
+        case .locked: "待选择"
         case .unlocked: "已解锁"
         case .claimed: "已领取"
         }
+    }
+
+    private var stateSymbol: String {
+        if isCurrentWish { return "heart.fill" }
+        return switch reward.state {
+        case .locked: "sparkles"
+        case .unlocked: "party.popper.fill"
+        case .claimed: "gift.fill"
+        }
+    }
+
+    private var stateTint: Color {
+        if isCurrentWish { return GuozaiColor.leaf }
+        return switch reward.state {
+        case .locked: GuozaiColor.inkMuted
+        case .unlocked: GuozaiColor.mango
+        case .claimed: GuozaiColor.oceanDeep
+        }
+    }
+
+    private var iconBackground: Color {
+        if isCurrentWish { return GuozaiColor.paper }
+        return reward.state == .locked ? GuozaiColor.canvasWarm : GuozaiColor.mangoSoft
+    }
+}
+
+private struct WeeklyWishProgress: View {
+    let achievedCount: Int
+
+    private var displayedCount: Int { min(max(achievedCount, 0), 7) }
+    private var remainingCount: Int { max(0, 5 - achievedCount) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: GuozaiSpacing.small) {
+            HStack(spacing: GuozaiSpacing.small) {
+                ForEach(0..<7, id: \.self) { index in
+                    Circle()
+                        .fill(index < displayedCount ? GuozaiColor.leaf : GuozaiColor.paper)
+                        .overlay {
+                            Circle()
+                                .stroke(
+                                    index == 4 ? GuozaiColor.mango : GuozaiColor.line,
+                                    lineWidth: index == 4 ? 2 : 1
+                                )
+                        }
+                        .frame(width: 22, height: 22)
+                        .overlay {
+                            if index < displayedCount {
+                                Image(systemName: "checkmark")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                }
+            }
+
+            Text(remainingCount == 0 ? "已经达到 5 天目标，心愿正在解锁。" : "本周已达成 \(achievedCount) 天，再达成 \(remainingCount) 天就能解锁。")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(GuozaiColor.oceanDeep)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("本周已达成 \(achievedCount) 天，目标 5 天")
     }
 }

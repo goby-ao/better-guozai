@@ -465,6 +465,7 @@ final class WishRewardRecord {
     var detail: String
     var linkedBadgeId: String?
     var weeklyTarget: Int?
+    var selectedAt: Date?
     var stateRaw: String
     var unlockedAt: Date?
     var claimedAt: Date?
@@ -477,6 +478,7 @@ final class WishRewardRecord {
         detail: String = "",
         linkedBadgeId: String? = nil,
         weeklyTarget: Int? = nil,
+        selectedAt: Date? = nil,
         state: StoredWishState = .locked,
         unlockedAt: Date? = nil,
         claimedAt: Date? = nil,
@@ -488,6 +490,7 @@ final class WishRewardRecord {
         self.detail = detail
         self.linkedBadgeId = linkedBadgeId
         self.weeklyTarget = weeklyTarget
+        self.selectedAt = selectedAt
         self.stateRaw = state.rawValue
         self.unlockedAt = unlockedAt
         self.claimedAt = claimedAt

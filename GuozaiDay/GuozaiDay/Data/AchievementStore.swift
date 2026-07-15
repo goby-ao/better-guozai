@@ -1,12 +1,19 @@
 import Foundation
 import SwiftData
+#if SWIFT_PACKAGE
+import GuozaiCore
+#endif
 
 @MainActor
 enum AchievementStore {
     static let ruleVersion = 1
 
     @discardableResult
-    static func evaluate(profileId: UUID, in context: ModelContext) throws -> [BadgeAwardRecord] {
+    static func evaluate(
+        profileId: UUID,
+        today: LocalDay = LocalDay(date: .now),
+        in context: ModelContext
+    ) throws -> [BadgeAwardRecord] {
         let taskRecords = try context.fetch(FetchDescriptor<DailyTaskRecord>())
             .filter { $0.profileId == profileId }
         let snapshots = taskRecords.compactMap(\.coreSnapshot)
@@ -40,6 +47,7 @@ enum AchievementStore {
             profileId: profileId,
             newlyAwarded: Set(pending.map(\.rawValue)),
             tasks: taskRecords,
+            today: today,
             in: context
         )
 
@@ -76,28 +84,46 @@ enum AchievementStore {
         profileId: UUID,
         newlyAwarded: Set<String>,
         tasks: [DailyTaskRecord],
+        today: LocalDay,
         in context: ModelContext
     ) throws {
         let existingAwardIds = Set(try context.fetch(FetchDescriptor<BadgeAwardRecord>())
             .filter { $0.profileId == profileId }
             .map(\.stableBadgeId))
             .union(newlyAwarded)
-        let achievedThisWeek = currentWeekAchievedDayCount(tasks: tasks)
+        let achievedThisWeek = currentWeekAchievedDayCount(tasks: tasks, today: today)
+        let rewards = try context.fetch(FetchDescriptor<WishRewardRecord>())
+            .filter { $0.profileId == profileId }
+        let activeWeeklyWish = WishRewardStore.normalizeWeeklySelection(
+            in: rewards,
+            weekContaining: today
+        )
+        let lockedRewards = rewards.filter { $0.state == .locked }
 
-        for reward in try context.fetch(FetchDescriptor<WishRewardRecord>())
-        where reward.profileId == profileId && reward.state == .locked {
+        for reward in lockedRewards {
             let badgeSatisfied = reward.linkedBadgeId.map(existingAwardIds.contains) ?? false
-            let weeklySatisfied = reward.weeklyTarget.map { achievedThisWeek >= $0 } ?? false
-            if badgeSatisfied || weeklySatisfied {
+            let isSelectedWeeklyWish = reward.id == activeWeeklyWish?.id
+            if isSelectedWeeklyWish {
+                reward.weeklyTarget = WishRewardStore.weeklyTarget
+            }
+            let isSatisfied = WishUnlockPolicy.isSatisfied(
+                linkedBadgeSatisfied: badgeSatisfied,
+                weeklyTarget: reward.weeklyTarget,
+                isSelectedWeeklyWish: isSelectedWeeklyWish,
+                achievedDayCount: achievedThisWeek
+            )
+            if isSatisfied {
                 reward.state = .unlocked
                 reward.unlockedAt = .now
             }
         }
     }
 
-    private static func currentWeekAchievedDayCount(tasks: [DailyTaskRecord]) -> Int {
-        let today = LocalDay(date: .now)
-        let calendar = Calendar.guozaiGregorian
+    static func currentWeekAchievedDayCount(
+        tasks: [DailyTaskRecord],
+        today: LocalDay
+    ) -> Int {
+        let calendar = Calendar.guozaiWeekGregorian
         guard
             let todayDate = today.date(calendar: calendar),
             let week = calendar.dateInterval(of: .weekOfYear, for: todayDate)
@@ -111,6 +137,7 @@ enum AchievementStore {
             .values
             .count { StoredDailyProgress(tasks: Array($0)).isAchieved }
     }
+
 }
 
 struct BadgePresentation: Identifiable {

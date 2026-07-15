@@ -27,13 +27,13 @@ let package = Package(
             dependencies: ["GuozaiCore"],
             path: "GuozaiDay/Data",
             exclude: [
-                "AchievementStore.swift",
                 "Backup/AnalyticsCSVService.swift",
                 "Notifications"
             ],
             sources: [
                 "PersistenceModels.swift",
                 "AppDataServices.swift",
+                "AchievementStore.swift",
                 "CoreSnapshotAdapters.swift",
                 "Backup/AppBackupService.swift",
                 "Backup/BackupDocuments.swift"

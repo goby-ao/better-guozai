@@ -99,6 +99,13 @@ public extension Calendar {
         return calendar
     }
 
+    static var guozaiWeekGregorian: Calendar {
+        var calendar = guozaiGregorian
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+        return calendar
+    }
+
     static var guozaiStableGregorian: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = Locale(identifier: "en_US_POSIX")

@@ -454,3 +454,102 @@ struct StoredDailyProgress {
         requiredTotalCount > 0 && requiredCompletedCount == requiredTotalCount
     }
 }
+
+enum WishRewardStoreError: LocalizedError, Equatable {
+    case weeklyWishRequired
+    case weeklyWishAlreadyUnlocked
+
+    var errorDescription: String? {
+        switch self {
+        case .weeklyWishRequired:
+            "只能选择仍在成长中的每周心愿。"
+        case .weeklyWishAlreadyUnlocked:
+            "本周已经解锁了一个心愿，下周再选择新的吧。"
+        }
+    }
+}
+
+@MainActor
+enum WishRewardStore {
+    static let weeklyTarget = 5
+
+    static func select(
+        _ reward: WishRewardRecord,
+        selectedAt: Date = .now,
+        in context: ModelContext
+    ) throws {
+        guard reward.state == .locked, reward.weeklyTarget != nil else {
+            throw WishRewardStoreError.weeklyWishRequired
+        }
+
+        let rewards = try context.fetch(FetchDescriptor<WishRewardRecord>())
+            .filter { $0.profileId == reward.profileId }
+        let selectedDay = LocalDay(date: selectedAt)
+        guard !hasUnlockedWeeklyWish(in: rewards, weekContaining: selectedDay) else {
+            throw WishRewardStoreError.weeklyWishAlreadyUnlocked
+        }
+
+        let weeklyRewards = rewards.filter {
+            $0.state == .locked && $0.weeklyTarget != nil
+        }
+
+        for candidate in weeklyRewards {
+            candidate.selectedAt = candidate.id == reward.id ? selectedAt : nil
+        }
+        reward.weeklyTarget = weeklyTarget
+    }
+
+    static func hasUnlockedWeeklyWish(
+        in rewards: [WishRewardRecord],
+        weekContaining day: LocalDay
+    ) -> Bool {
+        let calendar = Calendar.guozaiWeekGregorian
+        guard
+            let date = day.date(calendar: calendar),
+            let week = calendar.dateInterval(of: .weekOfYear, for: date)
+        else { return false }
+
+        return rewards.contains { reward in
+            guard
+                reward.weeklyTarget != nil,
+                reward.state != .locked,
+                let unlockedAt = reward.unlockedAt ?? reward.claimedAt
+            else { return false }
+            return week.contains(unlockedAt)
+        }
+    }
+
+    @discardableResult
+    static func normalizeWeeklySelection(
+        in rewards: [WishRewardRecord],
+        weekContaining day: LocalDay
+    ) -> WishRewardRecord? {
+        let activeWish: WishRewardRecord?
+        if hasUnlockedWeeklyWish(in: rewards, weekContaining: day) {
+            activeWish = nil
+        } else {
+            activeWish = rewards
+                .filter { $0.state == .locked && $0.weeklyTarget != nil && $0.selectedAt != nil }
+                .max(by: weeklySelectionOrder)
+        }
+
+        for reward in rewards where reward.state == .locked && reward.weeklyTarget != nil {
+            if reward.id != activeWish?.id {
+                reward.selectedAt = nil
+            }
+        }
+        return activeWish
+    }
+
+    private static func weeklySelectionOrder(
+        _ lhs: WishRewardRecord,
+        _ rhs: WishRewardRecord
+    ) -> Bool {
+        let left = lhs.selectedAt ?? .distantPast
+        let right = rhs.selectedAt ?? .distantPast
+        if left == right {
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+        return left < right
+    }
+}

@@ -120,6 +120,7 @@ final class BackupCodecTests: XCTestCase {
                     name: "去公园",
                     linkedBadgeCode: BadgeCode.flexFiveOfSeven.rawValue,
                     weeklyTarget: 5,
+                    selectedAt: moment,
                     unlockedAt: moment,
                     createdAt: moment
                 )
@@ -129,6 +130,33 @@ final class BackupCodecTests: XCTestCase {
         let decoded = try BackupCodec.decode(BackupCodec.encode(payload))
 
         XCTAssertEqual(decoded, payload)
+    }
+
+    func testLegacyVersionOneWishWithoutSelectionStillDecodes() throws {
+        let profileID = UUID()
+        let payload = BackupPayload(
+            exportedAt: Date(timeIntervalSince1970: 0),
+            appVersion: "1.0.0",
+            profiles: [ProfileSnapshot(id: profileID, nickname: "果仔")],
+            wishRewards: [
+                WishRewardSnapshot(
+                    id: UUID(),
+                    profileID: profileID,
+                    name: "周末去骑车",
+                    weeklyTarget: 5,
+                    selectedAt: Date(timeIntervalSince1970: 10)
+                )
+            ]
+        )
+        let encoded = try BackupCodec.encode(payload)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        var rewards = try XCTUnwrap(object["wishRewards"] as? [[String: Any]])
+        rewards[0].removeValue(forKey: "selectedAt")
+        object["wishRewards"] = rewards
+
+        let decoded = try BackupCodec.decode(JSONSerialization.data(withJSONObject: object))
+
+        XCTAssertNil(decoded.wishRewards.first?.selectedAt)
     }
 
     func testUnsupportedBackupVersionIsRejected() throws {

@@ -33,10 +33,15 @@ struct GrowthView: View {
         reflections.first { $0.profileId == profileID && $0.dayKey == selectedDay.key }
     }
 
+    private var gardenProgress: GrowthGardenProgress {
+        GrowthGardenProgress(tasks: tasks.compactMap(\.coreSnapshot))
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: GuozaiSpacing.xLarge) {
                 header
+                GrowthGardenView(progress: gardenProgress)
                 WeeklyHighlight(tasksByDay: tasksByDay, today: today)
 
                 PaperSection(
@@ -119,7 +124,7 @@ private struct WeeklyHighlight: View {
     let today: LocalDay
 
     private var recentDays: [LocalDay] {
-        let calendar = Calendar.guozaiGregorian
+        let calendar = Calendar.guozaiWeekGregorian
         guard
             let todayDate = today.date(calendar: calendar),
             let week = calendar.dateInterval(of: .weekOfYear, for: todayDate)

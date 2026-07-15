@@ -69,7 +69,7 @@ struct RewardsManagerView: View {
         Text("把成长变成温暖的纪念")
           .guozaiTextStyle(.sectionTitle)
           .foregroundStyle(GuozaiColor.ink)
-        Text("特别勋章永久保留；心愿靠成长解锁，不用积分兑换。")
+        Text("特别勋章永久保留；果仔自己选心愿，靠一周里的认真达成解锁。")
           .guozaiTextStyle(.body)
           .foregroundStyle(GuozaiColor.inkMuted)
       }
@@ -93,7 +93,7 @@ struct RewardsManagerView: View {
 
       ManagerActionButton(
         title: "创建心愿奖励",
-        subtitle: "关联勋章，或设定本周达成天数",
+        subtitle: "关联勋章，或创建一个 5/7 周心愿",
         symbol: "gift.fill",
         tint: GuozaiColor.ocean
       ) {
@@ -127,7 +127,7 @@ struct RewardsManagerView: View {
   private var wishesSection: some View {
     PaperSection(
       "心愿清单",
-      subtitle: "解锁后由家长确认领取；若点错，也可以撤销领取。",
+      subtitle: "周心愿由果仔选择；解锁后由家长确认领取。",
       systemImage: "gift.circle.fill"
     ) {
       if profileRewards.isEmpty {
@@ -327,6 +327,13 @@ private struct WishManagerRow: View {
               .foregroundStyle(GuozaiColor.inkMuted)
           }
 
+
+          if reward.state == .locked, reward.weeklyTarget != nil, reward.selectedAt != nil {
+            Label("果仔当前选择", systemImage: "heart.fill")
+              .font(.subheadline.weight(.bold))
+              .foregroundStyle(GuozaiColor.leaf)
+          }
+
           Label(conditionTitle, systemImage: "calendar.badge.checkmark")
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(GuozaiColor.inkMuted)
@@ -352,7 +359,9 @@ private struct WishManagerRow: View {
       return "获得“\(BadgePresentation(code: code).title)”后解锁"
     }
     if let target = reward.weeklyTarget {
-      return "本周达成 \(target) 天后解锁"
+      return reward.selectedAt == nil
+        ? "等待果仔选择，选中后本周达成 \(target) 天解锁"
+        : "本周达成 \(target) 天后解锁"
     }
     return "等待成长条件"
   }
@@ -501,7 +510,6 @@ private struct WishRewardEditorView: View {
   @State private var detail = ""
   @State private var condition: WishCondition = .systemBadge
   @State private var selectedBadgeID = BadgeCode.firstCheckIn.rawValue
-  @State private var weeklyTarget = 5
   @State private var errorMessage: String?
 
   private var canSave: Bool {
@@ -540,21 +548,40 @@ private struct WishRewardEditorView: View {
           .guozaiScaledSystemFont(size: 17, weight: .semibold, design: .rounded)
           .frame(minHeight: 52)
         } else {
-          Stepper(value: $weeklyTarget, in: 1...7) {
-            VStack(alignment: .leading, spacing: 3) {
-              Text("本周达成 \(weeklyTarget) 天")
-                .guozaiScaledSystemFont(size: 18, weight: .bold, design: .rounded)
-              Text("达成全部必做任务，才算达成一天")
-                .font(.subheadline)
-                .foregroundStyle(GuozaiColor.inkMuted)
+          VStack(alignment: .leading, spacing: GuozaiSpacing.medium) {
+            Label("一周达成 5 天", systemImage: "calendar.badge.checkmark")
+              .guozaiScaledSystemFont(size: 18, weight: .bold, design: .rounded)
+              .foregroundStyle(GuozaiColor.ink)
+
+            HStack(spacing: GuozaiSpacing.small) {
+              ForEach(0..<7, id: \.self) { index in
+                Circle()
+                  .fill(index < 5 ? GuozaiColor.leafSoft : GuozaiColor.canvasWarm)
+                  .overlay {
+                    Circle().stroke(index == 4 ? GuozaiColor.mango : GuozaiColor.line, lineWidth: index == 4 ? 2 : 1)
+                  }
+                  .frame(width: 25, height: 25)
+                  .overlay {
+                    if index < 5 {
+                      Image(systemName: "leaf.fill")
+                        .font(.caption2.bold())
+                        .foregroundStyle(GuozaiColor.leaf)
+                    }
+                  }
+              }
             }
+
+            Text("果仔先从心愿清单里选一个；一周内有 5 天完成全部必做任务，就会自动解锁。")
+              .font(.subheadline)
+              .foregroundStyle(GuozaiColor.inkMuted)
+              .fixedSize(horizontal: false, vertical: true)
           }
-          .frame(minHeight: 64)
+          .padding(.vertical, GuozaiSpacing.small)
         }
       } header: {
         Text("解锁条件")
       } footer: {
-        Text("心愿满足条件后会自动解锁，再由家长确认是否已领取。")
+        Text("勋章心愿按勋章解锁；周心愿固定采用温和的 5/7 节奏。")
       }
     }
     .scrollContentBackground(.hidden)
@@ -596,7 +623,7 @@ private struct WishRewardEditorView: View {
         title: title.trimmingCharacters(in: .whitespacesAndNewlines),
         detail: detail.trimmingCharacters(in: .whitespacesAndNewlines),
         linkedBadgeId: condition == .systemBadge ? selectedBadgeID : nil,
-        weeklyTarget: condition == .weeklyDays ? weeklyTarget : nil
+        weeklyTarget: condition == .weeklyDays ? WishRewardStore.weeklyTarget : nil
       ))
       try PersistenceWriter.save(modelContext)
       try AchievementStore.evaluate(profileId: profile.id, in: modelContext)
@@ -617,7 +644,7 @@ private enum WishCondition: String, CaseIterable, Identifiable {
   var title: String {
     switch self {
     case .systemBadge: "系统勋章"
-    case .weeklyDays: "本周达成"
+    case .weeklyDays: "每周 5/7"
     }
   }
 }

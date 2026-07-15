@@ -144,6 +144,7 @@ public struct WishRewardSnapshot: Codable, Hashable, Identifiable, Sendable {
     public let linkedBadgeCode: String?
     public let targetDescription: String?
     public let weeklyTarget: Int?
+    public let selectedAt: Date?
     public let unlockedAt: Date?
     public let claimedAt: Date?
     public let createdAt: Date?
@@ -155,6 +156,7 @@ public struct WishRewardSnapshot: Codable, Hashable, Identifiable, Sendable {
         linkedBadgeCode: String? = nil,
         targetDescription: String? = nil,
         weeklyTarget: Int? = nil,
+        selectedAt: Date? = nil,
         unlockedAt: Date? = nil,
         claimedAt: Date? = nil,
         createdAt: Date? = nil
@@ -165,6 +167,7 @@ public struct WishRewardSnapshot: Codable, Hashable, Identifiable, Sendable {
         self.linkedBadgeCode = linkedBadgeCode
         self.targetDescription = targetDescription
         self.weeklyTarget = weeklyTarget
+        self.selectedAt = selectedAt
         self.unlockedAt = unlockedAt
         self.claimedAt = claimedAt
         self.createdAt = createdAt

@@ -42,6 +42,17 @@ struct TodayView: View {
         StoredDailyProgress(tasks: tasks)
     }
 
+    private var gardenProgress: GrowthGardenProgress {
+        guard let activeProfileID else {
+            return GrowthGardenProgress(achievedDayCount: 0)
+        }
+        return GrowthGardenProgress(
+            tasks: allTasks
+                .filter { $0.profileId == activeProfileID }
+                .compactMap(\.coreSnapshot)
+        )
+    }
+
     private var layoutPolicy: TodayLayoutPolicy {
         TodayLayoutPolicy(isCompactWidth: isCompact)
     }
@@ -430,14 +441,21 @@ struct TodayView: View {
     }
 
     private func showPraise(for task: DailyTaskRecord, isDayAchieved: Bool) {
-        let completedCount = StoredDailyProgress(tasks: tasks).completedCount
-        let message = Self.praiseMessages[max(completedCount - 1, 0) % Self.praiseMessages.count]
+        let copy = task.coreSnapshot.map {
+            CompletionPraiseCopy.make(for: $0, isDayAchieved: isDayAchieved)
+        } ?? CompletionPraise(
+            title: isDayAchieved ? "今天的计划完成了" : "这一步完成了",
+            message: isDayAchieved
+                ? "你一项一项完成了今天的计划，小树也长大了一步。"
+                : "你认真完成了刚才的计划。"
+        )
         let moment = CompletionPraiseMoment(
             taskID: task.id,
             taskTitle: task.title,
-            title: isDayAchieved ? "今日达成！" : "果仔真棒！",
-            message: isDayAchieved ? "必做任务全部完成，今天的星星亮起来啦！" : message,
-            isDayAchieved: isDayAchieved
+            title: copy.title,
+            message: copy.message,
+            isDayAchieved: isDayAchieved,
+            gardenProgress: isDayAchieved ? gardenProgress : nil
         )
         let token = UUID()
         praiseToken = token
@@ -463,12 +481,6 @@ struct TodayView: View {
         }
     }
 
-    private static let praiseMessages = [
-        "又向前迈了一小步！",
-        "认真完成的样子真闪亮！",
-        "说到做到，行动力满满！",
-        "这份坚持值得一个大大的赞！"
-    ]
 }
 
 private struct TaskGroupHeader: View {

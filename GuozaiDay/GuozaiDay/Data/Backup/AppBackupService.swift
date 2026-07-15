@@ -405,25 +405,36 @@ enum AppBackupService {
                     result.insertedBadges += 1
                 }
 
-                var rewardIDs = Set(try context.fetch(FetchDescriptor<WishRewardRecord>()).map(\.id))
+                var storedRewards = try context.fetch(FetchDescriptor<WishRewardRecord>())
+                var rewardIDs = Set(storedRewards.map(\.id))
                 for snapshot in payload.wishRewards {
                     guard rewardIDs.insert(snapshot.id).inserted else {
                         result.skippedRewards += 1
                         continue
                     }
-                    context.insert(WishRewardRecord(
+                    let reward = WishRewardRecord(
                         id: snapshot.id,
                         profileId: mappedProfileID(snapshot.profileID),
                         title: snapshot.name,
                         detail: snapshot.targetDescription ?? "",
                         linkedBadgeId: snapshot.linkedBadgeCode,
                         weeklyTarget: snapshot.weeklyTarget,
+                        selectedAt: snapshot.selectedAt,
                         state: storedWishState(snapshot),
                         unlockedAt: snapshot.unlockedAt,
                         claimedAt: snapshot.claimedAt,
                         createdAt: snapshot.createdAt ?? payload.exportedAt
-                    ))
+                    )
+                    context.insert(reward)
+                    storedRewards.append(reward)
                     result.insertedRewards += 1
+                }
+
+                for rewards in Dictionary(grouping: storedRewards, by: \.profileId).values {
+                    WishRewardStore.normalizeWeeklySelection(
+                        in: rewards,
+                        weekContaining: LocalDay(date: .now)
+                    )
                 }
             }
         } catch {
@@ -581,6 +592,7 @@ enum AppBackupService {
             linkedBadgeCode: record.linkedBadgeId,
             targetDescription: record.detail.nilIfEmpty,
             weeklyTarget: record.weeklyTarget,
+            selectedAt: record.selectedAt,
             unlockedAt: record.unlockedAt,
             claimedAt: record.claimedAt,
             createdAt: record.createdAt
