@@ -27,7 +27,7 @@ The app does not turn habit building into another report card. There are no coin
 
 ### 🌱 Grow effort into a garden
 
-Completing every required task for the day records a Daily Achievement and grows the current plant by one step. A complete cycle has 28 steps, moving from seed to sprout, seedling, young tree, and finally a flourishing tree before the next one begins.
+Completing every required task for the day records a Daily Achievement and grows the current plant by one step. A complete cycle has 28 steps shown through nine clear forms, moving from a planted seed through cracking and sprouting to a mango tree bearing golden fruit before the next one begins.
 
 The Growth Garden rewards accumulation, not perfect continuity. Missing a day does not make the plant wither or trigger a punishment animation.
 

@@ -1,18 +1,39 @@
 import Foundation
 
+/// The raw values are stable serialization identifiers, not visual ordering.
+/// Use `journeyOrder` when presenting the stages from seed to fruit.
 public enum GrowthGardenStage: Int, CaseIterable, Codable, Hashable, Sendable {
-    case seed
-    case sprout
-    case seedling
-    case youngTree
-    case leafyTree
-    case flourishing
+    case seed = 0
+    case crackedSeed = 6
+    case sprout = 1
+    case seedling = 2
+    case strongSeedling = 7
+    case youngTree = 3
+    case leafyTree = 4
+    case flourishing = 5
+    case fruiting = 8
+
+    public static var journeyOrder: [Self] {
+        allCases
+    }
 }
 
 /// A durable, non-spendable view of achieved days. Every 28 achieved days leaves
 /// one completed tree in the garden and starts the next tree from a new seed.
 public struct GrowthGardenProgress: Codable, Hashable, Sendable {
     public static let achievedDaysPerTree = 28
+
+    private static let stageMilestones: [(day: Int, stage: GrowthGardenStage)] = [
+        (0, .seed),
+        (1, .crackedSeed),
+        (3, .sprout),
+        (6, .seedling),
+        (10, .strongSeedling),
+        (14, .youngTree),
+        (18, .leafyTree),
+        (23, .flourishing),
+        (28, .fruiting)
+    ]
 
     public let achievedDayCount: Int
 
@@ -46,20 +67,9 @@ public struct GrowthGardenProgress: Codable, Hashable, Sendable {
     }
 
     public var stage: GrowthGardenStage {
-        switch currentTreeDay {
-        case 0:
-            .seed
-        case 1...2:
-            .sprout
-        case 3...6:
-            .seedling
-        case 7...13:
-            .youngTree
-        case 14...20:
-            .leafyTree
-        default:
-            .flourishing
-        }
+        Self.stageMilestones
+            .last { $0.day <= currentTreeDay }?
+            .stage ?? .seed
     }
 
     public var daysUntilNextStage: Int {
@@ -67,19 +77,8 @@ public struct GrowthGardenProgress: Codable, Hashable, Sendable {
     }
 
     private var nextMilestone: Int {
-        switch stage {
-        case .seed:
-            1
-        case .sprout:
-            3
-        case .seedling:
-            7
-        case .youngTree:
-            14
-        case .leafyTree:
-            21
-        case .flourishing:
-            Self.achievedDaysPerTree
-        }
+        Self.stageMilestones
+            .first { $0.day > currentTreeDay }?
+            .day ?? Self.achievedDaysPerTree
     }
 }
